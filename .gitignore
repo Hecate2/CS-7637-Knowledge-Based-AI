@@ -12,3 +12,4 @@
 *.run.xml
 *.synctex.gz
 *kbai_ebook.pdf
+*.git*

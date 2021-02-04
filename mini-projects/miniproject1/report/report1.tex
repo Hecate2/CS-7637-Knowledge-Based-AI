@@ -1,0 +1,86 @@
+\documentclass[
+	%a4paper, % Use A4 paper size
+	letterpaper, % Use US letter paper size
+]{jdf}
+
+\usepackage{graphicx}
+\usepackage{subfigure}
+
+\usepackage{listings}
+\lstdefinestyle{myPython}{
+  language=Python,
+  basicstyle=\ttfamily \footnotesize,	
+  keywordstyle=\color{purple}\bfseries\underbar,
+  identifierstyle=, 
+  commentstyle=\color{vert},
+  stringstyle=, 
+  xleftmargin=1cm,
+  showstringspaces=false,columns=fullflexible,frame=,
+  numbers=left, numberstyle=\tiny\ttfamily, 
+  stepnumber=1, numbersep=5pt,firstnumber=last,numberblanklines=false,
+}
+
+%\addbibresource{references.bib}
+
+\author{Xinghao Chen}
+\email{xchen785@gatech.edu}
+\title{Sheep \& Wolves Problem Report}
+
+\begin{document}
+%\lsstyle
+
+\maketitle
+
+\begin{abstract}
+This document reports the solution to the Sheep \& Wolves problem. The state of the problem is defined, and all the states that can occur are stored in a state tree without repetition. With a method similar to breadth-first search, a new layer of the state tree is explored iteratively to find the solution. This method ensures the optimal solution, at a relatively heavy consumption of time and memory.
+\end{abstract}
+
+
+\section{Strategies}
+The most important strategy used in the AI agent is just to generate and test.
+\subsection{State}
+In this problem I define the state as the number of sheep and wolves at both sides, and whether the shepard is on the left or the right side of the river. \par
+\textbf{Definition for state}
+\begin{itemize}
+\item number of wolves and sheep on the left side
+\item number of wolves and sheep on the right side
+\item the side where the shepard is on
+\end{itemize}
+\subsection{Generating new states and testing with constraints}
+We can generate all possible moves (2 or 1 sheep, 2 or 1 wolf, 1 sheep and 1 wolf) and check whether wolves are more than sheeps on each side of the river. Besides, the number of wolves and sheeps on each side should always be greater than 0. \par
+\textbf{State generation}
+\begin{itemize}
+\item move 2 or 1 sheep
+\item move 2 or 1 wolf
+\item move 1 sheep and 1 wolf
+\end{itemize}
+\textbf{Checking constraints}
+\begin{itemize}
+\item no more wolves than sheeps on both sides, unless there is no sheep on a side
+\item number of wolves and sheep are no less than 0 on both sides
+\end{itemize}
+\subsection{State Tree}
+A state tree is built in my AI agent to record every state that has been generated and tested. The depth of the tree refers to the number of operations. The tree is initialized with only 1 layer containing the input state, and every time, by trying all possible moves, a new layer is generated from all the states in the previous layer. States that are illegal or the same as previous states are dropped. \par
+\textbf{State tree structure}
+\begin{itemize}
+\item root layer: 1 node recording the input state
+\item next layer: all possible states that can be generated from the previous layer
+\item requirement: All the nodes must be legal and productive.
+\end{itemize}
+\textbf{Productivity check}
+\begin{itemize}
+\item A new state cannot be inserted into the tree if there has been a same state existing in the tree.
+\end{itemize}
+\subsection{Confirming the final answer}
+Given the input state, we can immediately find the state of the solution. Therefore, when exploring a new layer of states in the tree, we can compare each new legal state with the solution. If, in an epoch of exploration, no legal and productive state can be generated in the new layer, we can confirm that there is no solution to the problem. \par
+\textbf{Final answer confirmation}
+\begin{itemize}
+\item The answer is found if a state that is the same as the solution is generated.
+\item There is no solution if no new legal and productive state can be generated in a new layer.
+\end{itemize}
+
+\section{Efficiency}
+My agent, by exploring a new layer of states in the tree each time, performs a process similar to breadth-first searching. This ensures the optimal solution with respect to steps the shepard has to move. If no state was dropped, each state from the previous layer would exponentially generate 5 new states in the new layer. In this way, though fortunately many states are dropped, the agent may still consume up to $O(n^2)$ scale of memory and $O(n^3)$ scale of time (with $n$ defined as the number of animals). But a breadth-first agent can always find the optimal solution. This method may be different from what humans use, beacuse it can be difficult for humans to record large numbers of states.\par
+\textbf{If the state tree would be overwhelmingly large according to some inputs, we may have to give up the breadth-first search.} There may be some methods similar to heuristic depth-first searching, which is more human-like, and may give an answer more quickly than breadth-first search. We may choose to explore from ``seemingly more productive'' states preferentially.
+
+\end{document}
