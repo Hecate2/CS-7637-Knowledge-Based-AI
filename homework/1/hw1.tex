@@ -1,0 +1,68 @@
+\documentclass[
+	%a4paper, % Use A4 paper size
+	letterpaper, % Use US letter paper size
+]{jdf}
+
+\usepackage{graphicx}
+\usepackage{subfigure}
+
+\usepackage{listings}
+\lstdefinestyle{myPython}{
+  language=Python,
+  basicstyle=\ttfamily \footnotesize,	
+  keywordstyle=\color{purple}\bfseries\underbar,
+  identifierstyle=, 
+  commentstyle=\color{vert},
+  stringstyle=, 
+  xleftmargin=1cm,
+  showstringspaces=false,columns=fullflexible,frame=,
+  numbers=left, numberstyle=\tiny\ttfamily, 
+  stepnumber=1, numbersep=5pt,firstnumber=last,numberblanklines=false,
+}
+\usepackage{biblatex}
+\addbibresource{references.bib}
+
+\author{Xinghao Chen}
+\email{xchen785@gatech.edu}
+\title{Homework 1}
+
+\begin{document}
+%\lsstyle
+
+\maketitle
+
+%\begin{abstract}
+%\end{abstract}
+
+\section{Problem 1}
+\subsection{The Semantic Network}
+See Fig. \ref{fig:semantic_network}. A red cross means a state is invalid because of the constraints; a yellow cross means that the state is unproductive because it has apppeared in earlier steps.
+\begin{figure*}[!htb]
+  \centering
+  \includegraphics[width=\textwidth]{semantic_network.png}
+  \caption{The semantic network showing the states and transitions}
+	\label{fig:semantic_network}
+\end{figure*}
+\subsection{The Solution}
+See Fig. \ref{fig:solution}.
+\begin{figure*}[!htb]
+  \centering
+    \subfigure[The flow of states]{\centering\includegraphics[width=\textwidth]{flow1.png}\label{fig:flow1}} \\
+	\subfigure[The flow of states: continued]{\centering\includegraphics[width=\textwidth]{flow2.png}\label{fig:flow2}}
+  \caption{The solution via generate \& test}
+	\label{fig:solution}
+\end{figure*}
+
+\section{Problem 2}
+\subsection{The content of \textit{General Data Protection Regulation} about the usage of personal data}
+Regulations about the usage of personal data are majorly documented in the 2nd chapter. The collecting and processing of personal data shall be lawful, fair and transparent, be at a minimal scale, and is strictly limited for only specified, explicit and legitimate purposes. Inaccurate data shall be erased or rectified without delay. Data shall be kept for no longer than is necessary for the specific purposes. The processing of data shall follow an apprpriate manner for intefrity and confidentiality. \par
+Besides, the data subject has the right to access, rectificate, erase, or restrict the use of his or her personal data.\par
+
+\subsection{How the regulation might apply to the use of artificial intelligence to create personalized experiences?}
+The regulation, enforcing extra restrictions on data management, reqiures a more complex architecture of data warehouse. Consequently, the AI agent must be able to flexibly handle the ever-changing data. 
+\subsubsection{It is hard to revert the training}
+Current AI technologies rarely consider the demand of retreating some data that has been used for training \citep{2012.07805}. What if some data has been used for training an AI, but the data subject then requires that his or her data must be deleted?\par
+
+\section{References}
+\printbibliography
+\end{document}
