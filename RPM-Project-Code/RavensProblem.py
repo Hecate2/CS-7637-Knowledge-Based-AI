@@ -52,3 +52,5 @@ class RavensProblem:
         # choices. The answer choices are named 1 through 6.
         self.figures={}
 
+    def __repr__(self):
+        return f'{self.name} {self.problemType}'
