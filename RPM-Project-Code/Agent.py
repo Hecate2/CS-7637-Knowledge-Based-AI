@@ -12,6 +12,8 @@ from __future__ import annotations
 from typing import *
 from enum import Enum
 
+import random  # just for generating a random answer...
+
 # Install Pillow and uncomment this line to access image processing.
 from PIL import Image
 import numpy as np
@@ -62,10 +64,10 @@ class Agent:
 
         problem_num = problem.problemSetName[-1], int(problem.name[-2:])
 
-        if solve_problem_type in problem.problemSetName and problem_num[0] in solve_problem_group and problem_num[1] in solve_problem_num:
-            pass
-        else:
-            return solution
+        # if solve_problem_type in problem.problemSetName and problem_num[0] in solve_problem_group and problem_num[1] in solve_problem_num:
+        #     pass
+        # else:
+        #     return solution
         
         if problem.problemType == '2x2':
             solution = self.solve22(problem, self.get_figures(problem))
@@ -80,27 +82,189 @@ class Agent:
         '''
         available figures: A-C, '1'-'6'
         '''
-        descriptors = {key: SingleShapeDescriptor.build_single_shape_descriptors(figures[key]) for key in figures}
+        def random_answer():
+            return random.randint(1,6)
+
+        def score_relationship_similarity(
+                relationship_AB: Dict[str:Dict[str:Dict[Agent.Relationship:Set]]], relationship_CD,
+                inverse_relationship_AB:Dict[Agent.Relationship:Set],
+                inverse_relationship_CD:Dict[Agent.Relationship:Set]) -> int:
+            if not inverse_relationship_AB and not inverse_relationship_CD:
+                return 2
+            score = 0
+            for key in inverse_relationship_AB:
+                if key in inverse_relationship_CD \
+                    and len(inverse_relationship_AB[key]) == len(inverse_relationship_CD[key]):
+                    if key == Agent.Disappear:
+                        for disappeared_shape_index_AB in inverse_relationship_AB[Agent.Disappear]:
+                            if disappeared_shape_index_AB < 0:
+                                disappeared_shape_index_AB = -disappeared_shape_index_AB - 1
+                                target_figure_name_AB = inverse_relationship_AB['name'][1]
+                            else:
+                                target_figure_name_AB = inverse_relationship_AB['name'][0]
+                            for disappeared_shape_index_CD in inverse_relationship_CD[Agent.Disappear]:
+                                if disappeared_shape_index_CD < 0:
+                                    disappeared_shape_index_CD = -disappeared_shape_index_CD - 1
+                                    target_figure_name_CD = inverse_relationship_CD['name'][1]
+                                else:
+                                    target_figure_name_CD = inverse_relationship_CD['name'][0]
+                                if self.Same.check_same(descriptors[target_figure_name_AB][disappeared_shape_index_AB],
+                                                        descriptors[target_figure_name_CD][disappeared_shape_index_CD]):
+                                    score += 1
+                    elif key == Agent.Symmetry:
+                        for tuple_of_shape_index_AB in inverse_relationship_AB[Agent.Symmetry]:
+                            for tuple_of_shape_index_CD in inverse_relationship_CD[Agent.Symmetry]:
+                                if relationship_AB[tuple_of_shape_index_AB[0]][tuple_of_shape_index_AB[1]] \
+                                == relationship_CD[tuple_of_shape_index_CD[0]][tuple_of_shape_index_CD[1]]:
+                                    score += 3
+                    elif key == Agent.Same:
+                        score += 1
+                    else:
+                        score += 3
+            return score
+            
         print(problem.name)
-        print('A,C')
-        relationship = self.find_geometric_relationships_between_single_shapes(descriptors['A'][0], descriptors['C'][0], outer_edge_only=False)
-        print(relationship)
-        print('B,2')
-        relationship = self.find_geometric_relationships_between_single_shapes(descriptors['B'][0], descriptors['2'][0], outer_edge_only=False)
-        print(relationship)
-        print('B,4')
-        relationship = self.find_geometric_relationships_between_single_shapes(descriptors['B'][0], descriptors['4'][0], outer_edge_only=False)
-        print(relationship)
-        print('C,5')
-        relationship = self.find_geometric_relationships_between_single_shapes(descriptors['C'][0], descriptors['5'][0], outer_edge_only=False)
-        print(relationship)
-        return 1
+        descriptors = {key: SingleShapeDescriptor.build_single_shape_descriptors(figures[key], figure_name=key) for key in figures}
+        # print(descriptors)
+        relationship_AB, inverse_relationship_AB = self.generate_relationship_between_figures(descriptors['A'], descriptors['B'], 'AB')
+        relationship_AC, inverse_relationship_AC = self.generate_relationship_between_figures(descriptors['A'], descriptors['C'], 'AC')
+        # print('AB:', relationship_AB)
+        # print('AC:', relationship_AC)
+        # print('AB inverse:', inverse_relationship_AB)
+        # print('AC inverse:', inverse_relationship_AC)
+
+        max_score = 0
+        max_score_ans = 1
+        for ans_code in '123456':
+            relationship_CD, inverse_relationship_CD = self.generate_relationship_between_figures(descriptors['C'], descriptors[ans_code],f'C{ans_code}')
+            relationship_BD, inverse_relationship_BD = self.generate_relationship_between_figures(descriptors['B'], descriptors[ans_code],f'B{ans_code}')
+            if (not relationship_AB or relationship_CD) and (not relationship_AC or relationship_BD):
+                # relationship found
+                # print(f'C{ans_code}:', relationship_CD)
+                # print(f'B{ans_code}:', relationship_BD)
+                # print(f'C{ans_code} inverse:', inverse_relationship_CD)
+                # print(f'B{ans_code} inverse:', inverse_relationship_BD)
+                score = score_relationship_similarity(relationship_AB, relationship_CD, inverse_relationship_AB, inverse_relationship_CD) \
+                      + score_relationship_similarity(relationship_AC, relationship_BD, inverse_relationship_AC, inverse_relationship_BD)
+                if score > max_score:
+                    max_score = score
+                    max_score_ans = int(ans_code)
+        # print('Ans:', max_score_ans)
+        return max_score_ans
+
+        # print('A,C')
+        # relationship = self.find_geometric_relationships_between_single_shapes(descriptors['A'][0], descriptors['C'][0], outer_edge_only=False)
+        # print(relationship)
+        # print('B,2')
+        # relationship = self.find_geometric_relationships_between_single_shapes(descriptors['B'][0], descriptors['2'][0], outer_edge_only=False)
+        # print(relationship)
+        # print('B,4')
+        # relationship = self.find_geometric_relationships_between_single_shapes(descriptors['B'][0], descriptors['4'][0], outer_edge_only=False)
+        # print(relationship)
+        # print('C,5')
+        # relationship = self.find_geometric_relationships_between_single_shapes(descriptors['C'][0], descriptors['5'][0], outer_edge_only=False)
+        # print(relationship)
+        # return 1
 
     def solve33(self, problem, figures) -> int:
         '''
         available figures: A-H, '1'-'8'
         '''
         return 1
+
+    def generate_relationship_between_figures(self, fig1_descriptors: List[SingleShapeDescriptor], fig2_descriptors: List[SingleShapeDescriptor], name:str):
+        '''
+        :param name: which problems are the descriptors from. e.g. 'A1'
+        '''
+        # {shape_index_in_fig1:{shape_index_in_fig2:{relationship_type:relationship}}}
+        relationship_dict = {'name':name}
+        # {relationship:set{(shape_index_in_fig1, shape_index_in_fig2)}}
+        inverse_relationship_dict = {'name':name}
+        shapes_in_1_not_found_relationship_with_2 = set()
+        shapes_in_2_found_relationship_with_1 = set()
+        for index1, single_shape_descriptor1 in enumerate(fig1_descriptors):
+            relationship_dict[index1] = dict()
+            for index2, single_shape_descriptor2 in enumerate(fig2_descriptors):
+                if index2 not in shapes_in_2_found_relationship_with_1:
+                    relationships = self.find_geometric_relationships_between_single_shapes(single_shape_descriptor1, single_shape_descriptor2)
+                    if relationships:
+                        relationship_dict[index1][index2] = relationships
+                        shapes_in_2_found_relationship_with_1.add(index2)
+                        for relationship in relationships:
+                            if not inverse_relationship_dict.get(relationship):
+                                inverse_relationship_dict[relationship] = set()
+                            inverse_relationship_dict[relationship].add((index1, index2))
+            if not relationship_dict[index1]:
+                shapes_in_1_not_found_relationship_with_2.add(index1)
+                del relationship_dict[index1]
+        if relationship_dict:  # only find disappering relationships when other relationships are found
+            for shape_index_1 in shapes_in_1_not_found_relationship_with_2:
+                relationship_dict[shape_index_1] = {Agent.Disappear: True}
+                if not inverse_relationship_dict.get(Agent.Disappear):
+                    inverse_relationship_dict[Agent.Disappear] = set()
+                inverse_relationship_dict[Agent.Disappear].add(shape_index_1)
+            for shape_index_2 in range(len(fig2_descriptors)):
+                if shape_index_2 not in shapes_in_2_found_relationship_with_1:
+                    relationship_dict[-shape_index_2-1] = {Agent.Disappear: True}
+                    if not inverse_relationship_dict.get(Agent.Disappear):
+                        inverse_relationship_dict[Agent.Disappear] = set()
+                    inverse_relationship_dict[Agent.Disappear].add(-shape_index_2-1)
+        return relationship_dict, inverse_relationship_dict
+
+    def find_geometric_relationships_between_single_shapes(self,
+            descriptor1: SingleShapeDescriptor, descriptor2: SingleShapeDescriptor, outer_edge_only=False,
+            stop_when_found=True):
+        relationships = dict()
+    
+        def create_key_value_filtering_none(key, value, filter_func=lambda x: x):
+            if filter_func(value):
+                relationships[key] = value
+                if stop_when_found:
+                    raise KeyboardInterrupt('Relationship found')
+    
+        try:
+            # TODO: same does not rule out symmetry, but rules out filling
+            create_key_value_filtering_none(self.Same,
+                self.Same.check_same(descriptor1, descriptor2, outer_edge_only=outer_edge_only))
+            create_key_value_filtering_none(self.Symmetry,
+                self.Symmetry(descriptor1, descriptor2, outer_edge_only=outer_edge_only),
+                filter_func=lambda x:x.symmetry_types)
+            create_key_value_filtering_none(self.Filling,
+                self.Filling(descriptor1, descriptor2),
+                filter_func=lambda x: x if x.filled_contours_1 or x.filled_contours_2 else None)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            return relationships if relationships else None
+
+    @staticmethod
+    def traverse_selected_relationships(relationships: Dict[Relationship:Set[Relationship]],
+                                        selection: Set[Relationship] = None):
+        '''
+        This method is likely to be deprecated
+        :param relationships: refer to the return value of function find_geometric_relationships_between_single_shapes
+        :param selection: which type(s) of relationships to yield. Yield all if None
+        '''
+        if selection:
+            if isinstance(selection, Agent.Relationship):  # selection = Symmetry -> {Symmetry}
+                selection = {selection}
+            for relationship in relationships[selection]:
+                yield relationship
+        else:
+            # yield all relationships
+            for relationship_set in relationships.values():
+                for relationship in relationship_set:
+                    yield relationship
+
+    def get_figures(self, problem, figures_str=None):
+        '''
+        :param figures_str: 'ABC123456'; only open images in figures_str if specified
+        '''
+        fig_dict = dict()
+        figures_str = figures_str if figures_str else problem.figures
+        for char in figures_str:
+            fig_dict[char] = cv2.imread(problem.figures[char].visualFilename, cv2.IMREAD_GRAYSCALE)
+        return fig_dict
 
     class Morphology:
         @staticmethod
@@ -176,6 +340,7 @@ class Agent:
             '''
             What direction is coordinate 2 in, compared to coordinate 1?
             :param coordinate1: (x,y) tuple or np.ndarray. (0,0) is at top-left of the image.
+            :param coordinate2: same as coordinate1.
             :param threshold: how many degrees of grace is allowed?
             For example, threshold==3. coordinate2 is considered to the right of coordinate1
             if its in -3 degrees to +3 degrees to the right of coordinate1
@@ -207,11 +372,6 @@ class Agent:
         def compare_relative_position_of_outer_edge_center(cls, fig1: SingleShapeDescriptor, fig2: SingleShapeDescriptor):
             return cls.compare_relative_position_of_two_points(fig1.center_outer_edge, fig2.center_outer_edge)
 
-    class RelativePosition:
-        def __init__(self, fig1: SingleShapeDescriptor, fig2: SingleShapeDescriptor):
-            center1, center2 = fig1.center_outer_edge, fig2.center_outer_edge
-            raise NotImplementedError
-
     class Same(Relationship):
         @staticmethod
         def check_same(fig1, fig2, outer_edge_only=False):
@@ -228,10 +388,13 @@ class Agent:
                 fig1, fig2 = fig1.single_component_figure, fig2.single_component_figure
             return Agent.Morphology.image_soft_equal(fig1, fig2)
 
-    class Symmetry(Relationship, Enum):
-        up_down = 1
-        left_right = 2
-        up_down_left_right = 3
+    class Symmetry(Relationship):
+        class SymmetryType(Enum):
+            up_down = 1
+            left_right = 2
+            up_down_left_right = 3
+            def __repr__(self):
+                return f"<{self._name_}>"
 
         @staticmethod
         def check_up_down_symmetry(fig1, fig2, outer_edge_only=False, flip_direction=0):
@@ -257,21 +420,43 @@ class Agent:
             return cls.check_up_down_symmetry(fig1, fig2, outer_edge_only=outer_edge_only, flip_direction=flip_direction)
 
         @classmethod
-        def detect_symmetry(cls, fig1, fig2, outer_edge_only=True):
+        def detect_symmetry(cls, fig1, fig2, outer_edge_only=True) -> Tuple[Agent.Symmetry.SymmetryType]:
             '''
             :param fig1: np.ndarray or SingleShapeDescriptor object
             :param fig2: same type as fig1
             '''
-            symmetry = set()
+            symmetry = []
             if cls.check_up_down_symmetry(fig1, fig2, outer_edge_only=outer_edge_only):
-                symmetry.add(cls.up_down)
+                symmetry.append(cls.SymmetryType.up_down)
             if cls.check_left_right_symmetry(fig1, fig2, outer_edge_only=outer_edge_only):
-                symmetry.add(cls.left_right)
+                symmetry.append(cls.SymmetryType.left_right)
             if cls.check_up_down_left_right_symmetry(fig1, fig2, outer_edge_only=outer_edge_only):
-                symmetry.add(cls.up_down_left_right)
-            return symmetry if symmetry else None
+                symmetry.append(cls.SymmetryType.up_down_left_right)
+            return tuple(symmetry) if symmetry else None
+        
+        def __init__(self, fig1, fig2, outer_edge_only=True):
+            symmetry_types = self.detect_symmetry(fig1, fig2, outer_edge_only=outer_edge_only)
+            self.symmetry_types = set(symmetry_types) if symmetry_types else None
+            
+        def __eq__(self, other):
+            if not isinstance(other, self.__class__):
+                raise ValueError(f'You can only compare two {self.__class__.__name__} objects with ==')
+            return True if self.symmetry_types & other.symmetry_types else False
         def __repr__(self):
-            return f"<{self._name_}>"
+            return f"{self.symmetry_types}"
+
+
+    class Disappear(Relationship):
+        @staticmethod
+        def detect_disappear(fig1:SingleShapeDescriptor, fig2_descriptor_list:List[SingleShapeDescriptor]):
+            prev_figure_name = fig2_descriptor_list[0].figure_name
+            for descriptor in fig2_descriptor_list[1:]:
+                if descriptor.figure_name != prev_figure_name:
+                    raise ValueError('It seems descriptors from fig2_descriptor_list are not from the same figure')
+            for descriptor in fig2_descriptor_list:
+                if Agent.Same.check_same(fig1, descriptor):
+                    return False
+            return True
 
     class Filling(Relationship):
         def __init__(self, fig1:SingleShapeDescriptor, fig2:SingleShapeDescriptor, kernel=cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))):
@@ -286,10 +471,10 @@ class Agent:
                 return
 
             difference = Agent.Morphology.morphological_difference(fig1.single_component_figure, fig2.single_component_figure, kernel)
-            descriptors_of_difference = SingleShapeDescriptor.build_single_shape_descriptors(difference, reverse_color=False)
+            descriptors_of_difference = SingleShapeDescriptor.build_single_shape_descriptors(difference, reverse_color=False, figure_name=f'AbsDiff between: {fig1.figure_name} {fig2.figure_name}')
 
             def register_filled_contours(fig, filled_contours):
-                if len(fig.contours) >= 2:
+                if not fig.filled:
                     contour_matchings = [Agent.ContourMatching(fig, descriptor_of_difference, kernel=kernel)
                                          for descriptor_of_difference in descriptors_of_difference]
                     for contour_matching in contour_matchings:
@@ -300,45 +485,12 @@ class Agent:
 
         def __repr__(self):
             if self.filled_contours_1 or self.filled_contours_2:
-                return f'Index of filled contour: in 1:{self.filled_contours_1 if self.filled_contours_1 else None}; in 2:{self.filled_contours_2 if self.filled_contours_2 else None}'
+                return f'Index of filled contour: in fig1:{self.filled_contours_1 if self.filled_contours_1 else None}; in fig2:{self.filled_contours_2 if self.filled_contours_2 else None}'
             else:
-                return f'None'
+                return f'No filling relationship'
 
-    def find_geometric_relationships_between_single_shapes(self,
-            descriptor1: SingleShapeDescriptor, descriptor2: SingleShapeDescriptor, outer_edge_only=False):
-        return {
-            self.Same: self.Same.check_same(descriptor1, descriptor2, outer_edge_only=outer_edge_only),
-            self.Symmetry: self.Symmetry.detect_symmetry(descriptor1, descriptor2, outer_edge_only=outer_edge_only),
-            self.Filling: self.Filling(descriptor1, descriptor2),
-        }
+    # TODO: shape changed
 
-    @staticmethod
-    def traverse_selected_relationships(relationships: Dict[Relationship:Set[Relationship]], selection: Set[Relationship] = None):
-        '''
-        :param relationships: refer to the return value of function find_geometric_relationships_between_single_shapes
-        :param selection: which type(s) of relationships to yield. Yield all if None
-        '''
-        if selection:
-            if isinstance(selection, Agent.Relationship):  # selection = Symmetry -> {Symmetry}
-                selection = {selection}
-            for relationship in relationships[selection]:
-                yield relationship
-        else:
-            # yield all relationships
-            for relationship_set in relationships.values():
-                for relationship in relationship_set:
-                    yield relationship
-
-    def get_figures(self, problem, figures_str=None):
-        '''
-        :param figures_str: 'ABC123456'; only open images in figures_str if specified
-        '''
-        fig_dict = dict()
-        figures_str = figures_str if figures_str else problem.figures
-        for char in figures_str:
-            fig_dict[char] = cv2.imread(problem.figures[char].visualFilename, cv2.IMREAD_GRAYSCALE)
-        return fig_dict
-    
 class AnalyticGeometry:
     @staticmethod
     def argument_angle_degree(vector):
@@ -398,7 +550,7 @@ class SingleShapeDescriptor:
         return mask
 
     @classmethod
-    def build_single_shape_descriptors(cls, figure: np.array, reverse_color=True) -> List[SingleShapeDescriptor]:
+    def build_single_shape_descriptors(cls, figure: np.array, figure_name: str = None, reverse_color=True) -> List[SingleShapeDescriptor]:
         '''
         Major object factory to intake a raw input figure. The input figure must take the operation 255-figure.
         :param reverse_color: If the figure is raw from the problems, we should take figure = 255-figure
@@ -408,7 +560,7 @@ class SingleShapeDescriptor:
         if reverse_color:
             figure = 255-figure  # opencv identifies white objects as important ones, while the black serve as backgroud
         ret, labels = cv2.connectedComponents(figure)
-        component_descriptions = [cls(cls.extract_single_connected_component(labels, label)) for label in range(1,ret)]
+        component_descriptions = [cls(cls.extract_single_connected_component(labels, label), figure_name=figure_name) for label in range(1,ret)]
         return component_descriptions
 
         '''codes to show the images and contours for debugging'''
@@ -424,10 +576,11 @@ class SingleShapeDescriptor:
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
         
-    def __init__(self, single_component_figure):
+    def __init__(self, single_component_figure, figure_name: str = None):
         '''
         :param single_component_figure: a figure containing a single connected component. The values of the component is 255, and the background value is 0
         '''
+        self.figure_name = figure_name
         # if a connected component is not filled, contours[0] should be the outer contour
         self.contours, self.hierarchy = self.detect_contours(single_component_figure)
         contours = self.contours
@@ -482,5 +635,5 @@ class SingleShapeDescriptor:
         return self.absolute_difference(self.single_component_figure, other.single_component_figure)
 
     def __repr__(self):
-        return f'SingleShape: {self.count_outer_edge} edges; {self.area_outer_edge} area, {self.perimeter_outer_edge}; Center={self.center_outer_edge}; Filled={self.filled}'
+        return f'SingleShape from {self.figure_name}: {self.count_outer_edge} edges; {self.area_outer_edge} area; Center={self.center_outer_edge}; Filled={self.filled}'
     
